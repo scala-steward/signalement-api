@@ -37,10 +37,21 @@ class ReportRepository @Inject()(dbConfigProvider: DatabaseConfigProvider)(impli
 
   class ReportTable(tag: Tag) extends Table[Report](tag, "signalement") {
 
+    implicit val DetailInputsColumnType = MappedColumnType.base[List[DetailInputValue], List[String]](
+      inputs => inputs.filter(_ != null).map(i => s"${i.label} ${i.value}"),
+      strings => strings.map(input =>
+        if (input.contains(':'))
+          DetailInputValue(
+            input.substring(0, input.indexOf(':') + 1),
+            input.substring(input.indexOf(':') + 1).trim
+          )
+        else DetailInputValue("Précision :", input))
+    )
+
     def id = column[UUID]("id", O.PrimaryKey)
     def category = column[String]("categorie")
     def subcategories = column[List[String]]("sous_categories")
-    def details = column[List[String]]("details")
+    def details = column[List[DetailInputValue]]("details")
     def companyName = column[String]("nom_etablissement")
     def companyAddress = column[String]("adresse_etablissement")
     def companyPostalCode = column[Option[String]]("code_postal")
@@ -52,18 +63,18 @@ class ReportRepository @Inject()(dbConfigProvider: DatabaseConfigProvider)(impli
     def contactAgreement = column[Boolean]("accord_contact")
     def status = column[Option[String]]("status")
 
-    type ReportData = (UUID, String, List[String], List[String], String, String, Option[String], Option[String], OffsetDateTime, String, String, String, Boolean, Option[String])
+    type ReportData = (UUID, String, List[String], List[DetailInputValue], String, String, Option[String], Option[String], OffsetDateTime, String, String, String, Boolean, Option[String])
 
     def constructReport: ReportData => Report = {
       case (id, category, subcategories, details, companyName, companyAddress, companyPostalCode, companySiret, creationDate, firstName, lastName, email, contactAgreement, status) =>
-        Report(Some(id), category, subcategories, details.filter(_ != null).map(string2detailInputValue(_)), companyName, companyAddress, companyPostalCode, companySiret,
+        Report(Some(id), category, subcategories, details, companyName, companyAddress, companyPostalCode, companySiret,
           Some(creationDate), firstName, lastName, email, contactAgreement, List.empty, status.map(ReportStatus.fromValue(_)))
     }
 
     def extractReport: PartialFunction[Report, ReportData] = {
       case Report(id, category, subcategories, details, companyName, companyAddress, companyPostalCode, companySiret,
       creationDate, firstName, lastName, email, contactAgreement, files, status) =>
-        (id.get, category, subcategories, details.map(detailInputValue => s"${detailInputValue.label} ${detailInputValue.value}"), companyName, companyAddress, companyPostalCode, companySiret,
+        (id.get, category, subcategories, details, companyName, companyAddress, companyPostalCode, companySiret,
           creationDate.get, firstName, lastName, email, contactAgreement, status.map(_.value))
     }
 
@@ -102,7 +113,7 @@ class ReportRepository @Inject()(dbConfigProvider: DatabaseConfigProvider)(impli
 
   private val date_part = SimpleFunction.binary[String, OffsetDateTime, Int]("date_part")
 
-  private val array_to_string = SimpleFunction.ternary[List[String], String, String, String]("array_to_string")
+  private def array_to_string[T] = SimpleFunction.ternary[List[T], String, String, String]("array_to_string")
 
   implicit class RegexLikeOps(s: Rep[String]) {
     def regexLike(p: Rep[String]): Rep[Boolean] = {
