@@ -7,6 +7,7 @@ import com.github.tminglei.slickpg.composite.Struct
 import play.api.libs.json.{Json, OFormat, Writes}
 import utils.Constants.ReportStatus._
 import utils.Constants.Departments
+import utils.EmailsHelpers._
 
 case class Report(
                    id: Option[UUID],
@@ -21,7 +22,7 @@ case class Report(
                    creationDate: Option[OffsetDateTime],
                    firstName: String,
                    lastName: String,
-                   email: String,
+                   email: Email,
                    contactAgreement: Boolean,
                    files: List[ReportFile],
                    status: Option[ReportStatusValue]
@@ -55,7 +56,7 @@ object Report {
         case true => Json.obj(
           "firstName" -> report.firstName,
           "lastName" -> report.lastName,
-          "email" -> report.email
+          "email" -> normalizeEmail(report.email)
         )
         case _ => Json.obj()
       })

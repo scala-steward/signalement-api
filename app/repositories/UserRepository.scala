@@ -7,6 +7,7 @@ import javax.inject.{Inject, Singleton}
 import models._
 import play.api.db.slick.DatabaseConfigProvider
 import slick.jdbc.JdbcProfile
+import utils.EmailsHelpers._
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -31,12 +32,12 @@ class UserRepository @Inject()(dbConfigProvider: DatabaseConfigProvider,
     def login = column[String]("login")
     def password = column[String]("password")
     def activationKey = column[Option[String]]("activation_key")
-    def email = column[Option[String]]("email")
+    def email = column[Option[Email]]("email")
     def firstName = column[Option[String]]("firstname")
     def lastName = column[Option[String]]("lastname")
     def role = column[String]("role")
 
-    type UserData = (UUID, String, String, Option[String], Option[String], Option[String], Option[String], String)
+    type UserData = (UUID, String, String, Option[String], Option[Email], Option[String], Option[String], String)
 
     def constructUser: UserData => User = {
       case (id, login, password, activationKey, email, firstName, lastName, role) => User(id, login, password, activationKey, email, firstName, lastName, UserRoles.withName(role))
@@ -93,15 +94,15 @@ class UserRepository @Inject()(dbConfigProvider: DatabaseConfigProvider,
   def delete(userId: UUID): Future[Int] = db
     .run(userTableQuery.filter(_.id === userId).delete)
 
-  def delete(email: String): Future[Int] = db
-    .run(userTableQuery.filter(_.email === email).delete)
+  def delete(email: String): Future[Int] = db       // FIXME
+    .run(userTableQuery.filter(_.email === Email(email)).delete)
 
   def findByLogin(login: String): Future[Option[User]] =
     db
     .run(userTableQuery
     .filter(u =>
       if (login.contains("@"))
-        (u.email === login).getOrElse(false)
+        (u.email === Email(login)).getOrElse(false)
       else
         (u.login === login)
       ).to[List].result.headOption)
