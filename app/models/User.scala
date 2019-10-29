@@ -7,6 +7,17 @@ import com.mohiva.play.silhouette.api.Identity
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
 import utils.EnumUtils
+import ch.qos.logback.core.subst.Token
+
+case class DraftUser(
+  email: String,
+  firstName: String,
+  lastName: String,
+  password: String
+)
+object DraftUser {
+  implicit val draftUserFormat = Json.format[DraftUser]
+}
 
 case class User (
                  id: UUID,
