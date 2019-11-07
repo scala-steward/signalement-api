@@ -78,8 +78,6 @@ class AccountController @Inject()(
                           )).map(companyAccessRepository.applyToken(t, _)))
                           .getOrElse(Future(false))
         } yield NoContent
-      }.recover {
-        case e => Unauthorized
       }}
     )
   }
