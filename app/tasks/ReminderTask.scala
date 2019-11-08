@@ -146,12 +146,13 @@ class ReminderTask @Inject()(actorSystem: ActorSystem,
   }
 
   def remindReportByMail(report: Report, userMail: String) = {
+    val expirationDate = report.creationDate.get.plus(reportExpirationDelay)
     eventRepository.createEvent(generateReminderEvent(report)).map { newEvent =>
       mailerService.sendEmail(
         from = configuration.get[String]("play.mail.from"),
         recipients = userMail)(
         subject = "Nouveau signalement",
-        bodyHtml = views.html.mails.professional.reportNotification(report).toString,
+        bodyHtml = views.html.mails.professional.reportReminder(report, expirationDate).toString,
         attachments = Seq(
           AttachmentFile("logo-signal-conso.png", environment.getFile("/appfiles/logo-signal-conso.png"), contentId = Some("logo"))
         )
